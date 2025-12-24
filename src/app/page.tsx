@@ -1,7 +1,14 @@
-import FigmaFinanceApp from '@/components/figma-finance/FigmaFinanceApp';
+import Dashboard from '@/components/dashboard/Dashboard';
+import Sidebar from '@/components/dashboard/Sidebar';
+import { SidebarInset } from '@/components/ui/sidebar';
 
 export default function Home() {
   return (
-    <FigmaFinanceApp />
+    <div className="flex">
+      <Sidebar />
+      <SidebarInset>
+        <Dashboard />
+      </SidebarInset>
+    </div>
   );
 }
