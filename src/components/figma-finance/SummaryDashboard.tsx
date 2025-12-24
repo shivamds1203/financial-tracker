@@ -1,7 +1,7 @@
 'use client';
 
-import type { Dispatch, FC, SetStateAction, useTransition } from 'react';
-import React, { useMemo, useState, startTransition } from 'react';
+import type { Dispatch, FC, SetStateAction } from 'react';
+import React, { useMemo, useState, useTransition } from 'react';
 import type { Transaction, Insights } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,7 +23,7 @@ interface SummaryDashboardProps {
 }
 
 const SummaryDashboard: FC<SummaryDashboardProps> = ({ transactions, budget, setBudget, insights, setInsights }) => {
-  const [isPending, startTransition] = React.useTransition();
+  const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
   const { totalIncome, totalExpenses, netSavings, expenseByCategory } = useMemo(() => {

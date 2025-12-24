@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import type { Transaction } from "@/lib/types";
-import { PlusCircle, MinusCircle, List, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+import { PlusCircle, MinusCircle, List, TrendingUp, TrendingDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -162,7 +162,7 @@ export default function TransactionManager({ onAddTransaction, transactions }: T
                                         <div key={t.id}>
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-3">
-                                                    {t.type === 'income' ? <ArrowUpCircle className="h-5 w-5 text-accent" /> : <ArrowDownCircle className="h-5 w-5 text-destructive" />}
+                                                    {t.type === 'income' ? <TrendingUp className="h-5 w-5 text-accent" /> : <TrendingDown className="h-5 w-5 text-destructive" />}
                                                     <div>
                                                         <p className="font-medium">{t.source}</p>
                                                         <p className="text-sm text-muted-foreground">{format(new Date(t.date), 'PPP')}</p>
