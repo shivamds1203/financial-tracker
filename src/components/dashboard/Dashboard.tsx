@@ -16,6 +16,11 @@ import {
   Target,
   User,
   Wallet,
+  TrendingUp,
+  TrendingDown,
+  FileText,
+  Lightbulb,
+  Sparkles,
 } from 'lucide-react';
 import {
   Bar,
@@ -42,6 +47,10 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
 import Image from 'next/image';
+import { useMemo, useState, useTransition } from 'react';
+import { getDashboardInsights } from '@/app/actions';
+import type { Insights } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const incomeSourceData = [
   { name: 'E-commerce', value: 2100 },
@@ -72,20 +81,56 @@ const assetsData = [
     { name: 'Land', value: 135000, color: '#c084fc' },
 ];
 
+const spendingData = [
+    { category: 'Housing', amount: 3452, icon: Home, color: 'text-purple-400', bgColor: 'bg-purple-500/20' },
+    { category: 'Personal', amount: 2200, icon: PersonStanding, color: 'text-pink-400', bgColor: 'bg-pink-500/20' },
+    { category: 'Transportation', amount: 2190, icon: Car, color: 'text-orange-400', bgColor: 'bg-orange-500/20' },
+];
+
+
 export default function Dashboard() {
   const currentDate = format(new Date(), 'EEEE, MMMM d, yyyy');
+  const [insights, setInsights] = useState<Insights | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const totalIncome = useMemo(() => incomeAndExpensesData.reduce((acc, item) => acc + item.income, 0), []);
+  const totalExpenses = useMemo(() => incomeAndExpensesData.reduce((acc, item) => acc + item.expenses, 0), []);
+  const availableBalance = totalIncome - totalExpenses;
+  const netWorth = useMemo(() => assetsData.reduce((acc, item) => acc + item.value, 0), []);
+  const incomeGoal = 39276;
+  const incomeGoalProgress = Math.round((totalIncome / incomeGoal) * 100);
+
+  const handleGenerateInsights = () => {
+    startTransition(async () => {
+      const incomeForInsights = incomeSourceData.map(item => ({ source: item.name, amount: item.value }));
+      const expendituresForInsights = spendingData.map(item => ({ category: item.category, amount: item.amount }));
+      
+      const result = await getDashboardInsights({
+        income: incomeForInsights,
+        expenditures: expendituresForInsights,
+        budget: 30000,
+      });
+
+      if (result.success && result.data) {
+        setInsights(result.data);
+      } else {
+        console.error(result.error);
+      }
+    });
+  };
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+      <header className="sticky top-0 z-30 flex h-auto items-center gap-4 border-b bg-background p-4 sm:px-6 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold">Personal Finance Tracker</h1>
           <p className="text-sm text-muted-foreground">Available Balance</p>
-          <p className="text-3xl font-bold text-blue-400">$14,822</p>
+          <p className="text-3xl font-bold text-blue-400">${availableBalance.toLocaleString()}</p>
         </div>
         <div className="ml-auto flex items-center gap-4">
           <Button variant="outline">Dashboard</Button>
           <Button variant="ghost">Spreadsheet</Button>
-          <div className="text-sm text-muted-foreground">{currentDate}</div>
+          <div className="text-sm text-muted-foreground hidden md:block">{currentDate}</div>
           <div className="flex items-center gap-2">
             <Avatar>
               <AvatarImage src="https://picsum.photos/seed/user/40/40" />
@@ -107,18 +152,18 @@ export default function Dashboard() {
               <CardTitle>Total Net Worth</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-bold">$278,378</p>
+              <p className="text-4xl font-bold">${netWorth.toLocaleString()}</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Spendings</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <TrendingDown className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$9,228</div>
+              <div className="text-2xl font-bold">${totalExpenses.toLocaleString()}</div>
               <ResponsiveContainer width="100%" height={50}>
-                <LineChart data={[{v:0}, {v:5}, {v:3}, {v:8}, {v:4}]}>
+                <LineChart data={incomeAndExpensesData.map(d => ({ v: d.expenses }))}>
                   <Line type="monotone" dataKey="v" stroke="#f43f5e" strokeWidth={2} dot={false}/>
                 </LineChart>
               </ResponsiveContainer>
@@ -127,12 +172,12 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Income</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$24,050</div>
+              <div className="text-2xl font-bold">${totalIncome.toLocaleString()}</div>
               <ResponsiveContainer width="100%" height={50}>
-                <LineChart data={[{v:0}, {v:5}, {v:3}, {v:8}, {v:4}]}>
+                <LineChart data={incomeAndExpensesData.map(d => ({ v: d.income }))}>
                   <Line type="monotone" dataKey="v" stroke="#f97316" strokeWidth={2} dot={false}/>
                 </LineChart>
               </ResponsiveContainer>
@@ -144,12 +189,12 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-bold">61%</span>
+                <span className="text-2xl font-bold">{incomeGoalProgress}%</span>
                 <span className="text-sm text-muted-foreground">
-                  $24,050 / 39,276
+                  ${totalIncome.toLocaleString()} / ${incomeGoal.toLocaleString()}
                 </span>
               </div>
-              <Progress value={61} className="mt-2 h-2" />
+              <Progress value={incomeGoalProgress} className="mt-2 h-2" />
               <p className="text-xs text-muted-foreground mt-1">Progress to month</p>
             </CardContent>
           </Card>
@@ -166,7 +211,7 @@ export default function Dashboard() {
                   <XAxis type="number" hide />
                   <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--foreground))'}}/>
                   <RechartsTooltip cursor={{fill: 'rgba(255,255,255,0.1)'}} contentStyle={{backgroundColor: 'hsl(var(--card))'}} />
-                  <Bar dataKey="value" fill="#14b8a6" radius={[0, 4, 4, 0]} barSize={20} />
+                  <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} barSize={20} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -181,8 +226,8 @@ export default function Dashboard() {
                   <XAxis dataKey="month" tick={{fill: 'hsl(var(--foreground))'}}/>
                   <YAxis tick={{fill: 'hsl(var(--foreground))'}}/>
                   <RechartsTooltip contentStyle={{backgroundColor: 'hsl(var(--card))'}} />
-                  <Line type="monotone" dataKey="income" stroke="#22c55e" strokeWidth={2} />
-                  <Line type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={2} />
+                  <Line type="monotone" dataKey="income" stroke="hsl(var(--chart-2))" strokeWidth={2} />
+                  <Line type="monotone" dataKey="expenses" stroke="hsl(var(--chart-5))" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -190,36 +235,24 @@ export default function Dashboard() {
         </div>
         
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <Card>
+            <Card className="md:col-span-1">
                 <CardHeader>
                     <CardTitle>Spendings</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="flex items-center">
-                        <div className="rounded-lg bg-purple-500/20 p-2 mr-4">
-                           <Home className="text-purple-400" />
+                    {spendingData.map(item => (
+                        <div key={item.category} className="flex items-center">
+                            <div className={`rounded-lg ${item.bgColor} p-2 mr-4`}>
+                                <item.icon className={item.color} />
+                            </div>
+                            <div className="flex-grow">{item.category}</div>
+                            <div className="font-semibold">${item.amount.toLocaleString()}</div>
                         </div>
-                        <div className="flex-grow">Housing</div>
-                        <div className="font-semibold">$3,452</div>
-                    </div>
-                    <div className="flex items-center">
-                        <div className="rounded-lg bg-pink-500/20 p-2 mr-4">
-                            <PersonStanding className="text-pink-400" />
-                        </div>
-                        <div className="flex-grow">Personal</div>
-                        <div className="font-semibold">$2,200</div>
-                    </div>
-                    <div className="flex items-center">
-                        <div className="rounded-lg bg-orange-500/20 p-2 mr-4">
-                            <Car className="text-orange-400" />
-                        </div>
-                        <div className="flex-grow">Transportation</div>
-                        <div className="font-semibold">$2,190</div>
-                    </div>
+                    ))}
                 </CardContent>
             </Card>
 
-            <Card>
+            <Card className="md:col-span-1">
                 <CardHeader>
                     <CardTitle>Assets</CardTitle>
                 </CardHeader>
@@ -245,33 +278,50 @@ export default function Dashboard() {
                     </div>
                 </CardContent>
             </Card>
-             <div className="space-y-4">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center">
-                            <MessageSquare className="mr-2 h-4 w-4"/>
-                            Notification
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p>3 Bills are past Due. Pay soon to avoid late fees.</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Expenses for My Dogs and Cats</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex justify-between items-end">
-                        <div className="space-y-2 text-sm">
-                           <div className="flex justify-between"><span className="text-muted-foreground">Routine Vet</span><span className="font-semibold ml-4">140</span></div>
-                           <div className="flex justify-between"><span className="text-muted-foreground">Food</span><span className="font-semibold ml-4">950</span></div>
-                           <div className="flex justify-between"><span className="text-muted-foreground">Food Treats</span><span className="font-semibold ml-4">231</span></div>
-                           <div className="flex justify-between"><span className="text-muted-foreground">Kennel Boarding</span><span className="font-semibold ml-4">65</span></div>
+            <Card className="md:col-span-1">
+                <CardHeader>
+                    <CardTitle className="flex items-center">
+                        <Sparkles className="mr-2 h-5 w-5 text-yellow-400"/>
+                        AI Financial Insights
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {isPending ? (
+                       <div className="space-y-4">
+                           <Skeleton className="h-4 w-3/4" />
+                           <Skeleton className="h-4 w-full" />
+                           <Skeleton className="h-4 w-full" />
+                           <Skeleton className="h-4 w-1/2" />
+                       </div>
+                    ) : insights ? (
+                        <div className="space-y-4 text-sm">
+                            <div>
+                                <h3 className="font-semibold flex items-center"><FileText className="mr-2 h-4 w-4" /> Summary</h3>
+                                <p className="text-muted-foreground">{insights.summary}</p>
+                            </div>
+                            <div>
+                                <h3 className="font-semibold flex items-center"><Lightbulb className="mr-2 h-4 w-4" /> Insights</h3>
+                                <ul className="list-disc pl-5 text-muted-foreground">
+                                    {insights.insights.map((insight, i) => <li key={i}>{insight}</li>)}
+                                </ul>
+                            </div>
+                             <div>
+                                <h3 className="font-semibold flex items-center"><Target className="mr-2 h-4 w-4" /> Recommendations</h3>
+                                <ul className="list-disc pl-5 text-muted-foreground">
+                                    {insights.recommendations.map((rec, i) => <li key={i}>{rec}</li>)}
+                                </ul>
+                            </div>
                         </div>
-                        <Image src="https://picsum.photos/seed/dog/100/100" width={80} height={80} alt="dog" data-ai-hint="dog cartoon" />
-                    </CardContent>
-                </Card>
-            </div>
+                    ) : (
+                       <div className="text-center">
+                         <p className="mb-4">Get AI-powered insights on your financial health.</p>
+                         <Button onClick={handleGenerateInsights} disabled={isPending}>
+                            {isPending ? 'Generating...' : 'Generate Insights'}
+                        </Button>
+                       </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
       </main>
     </div>
